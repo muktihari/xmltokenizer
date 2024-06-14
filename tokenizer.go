@@ -100,9 +100,9 @@ func (t *Tokenizer) Reset(r io.Reader, opts ...Option) {
 	}
 
 	switch {
-	case t.buf != nil:
+	case cap(t.buf) >= t.options.readBufferSize+defaultReadBufferSize:
 		t.buf = t.buf[:t.options.readBufferSize:cap(t.buf)]
-	case cap(t.buf) < t.options.readBufferSize+defaultAttrsBufferSize:
+	default:
 		t.buf = nil // Directs the Tokenizer to re-alloc.
 	}
 }
