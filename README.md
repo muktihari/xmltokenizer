@@ -9,7 +9,7 @@ XML Tokenizer is a low-memory high performance library for parsing simple XML 1.
 
 # Motivation
 
-Go provides a standard library for [XML](https://pkg.go.dev/encoding/xml) parsing, I've found it to be slow for my use case. I work with a lot of GPX files in my personal project to retrieve my workouts data; GPX is an XML-based file format. When parsing my 14MB GPX file containing 208km ride using the standard library's xml, it takes roughly 600ms which is super slow and it needs 2.8mil alloc!. I need a alternative library for parsing XML that's faster than standard library's `xml`, suitable for typical XML parsing tasks and no code should be made unsafe.
+Go provides a standard library for [XML](https://pkg.go.dev/encoding/xml) parsing, however, I've found it to be slow for my use case. I work with a lot of GPX files in my personal project to retrieve my workouts data; GPX is an XML-based file format. When parsing my 14MB GPX file containing 208km ride using the standard library's xml, it takes roughly 600ms which is super slow and it needs 2.8mil alloc!. I need an alternative library for parsing XML that's faster than standard library's `xml`, suitable for typical XML parsing tasks and no code should be made unsafe.
 
 # Usage
 
