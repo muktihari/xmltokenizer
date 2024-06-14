@@ -36,9 +36,9 @@ func (t *Track) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Tok
 
 		switch string(token.Name.Local) {
 		case "name":
-			t.Name = string(token.CharData)
+			t.Name = string(token.Data)
 		case "type":
-			t.Type = string(token.CharData)
+			t.Type = string(token.Data)
 		case "trkseg":
 			var trkseg TrackSegment
 			se := xmltokenizer.GetToken().Copy(token)
@@ -216,12 +216,12 @@ func (w *Waypoint) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.
 
 		switch string(token.Name.Local) {
 		case "ele":
-			w.Ele, err = strconv.ParseFloat(string(token.CharData), 64)
+			w.Ele, err = strconv.ParseFloat(string(token.Data), 64)
 			if err != nil {
 				return fmt.Errorf("ele: %w", err)
 			}
 		case "time":
-			w.Time, err = time.Parse(time.RFC3339, string(token.CharData))
+			w.Time, err = time.Parse(time.RFC3339, string(token.Data))
 			if err != nil {
 				return fmt.Errorf("time: %w", err)
 			}

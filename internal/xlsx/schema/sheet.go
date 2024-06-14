@@ -142,9 +142,9 @@ func (c *Cell) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 
 		switch string(token.Name.Local) {
 		case "v":
-			c.Value = string(token.CharData)
+			c.Value = string(token.Data)
 		case "t":
-			c.InlineString = string(token.CharData)
+			c.InlineString = string(token.Data)
 		}
 	}
 

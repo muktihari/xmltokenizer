@@ -1,7 +1,6 @@
 package xmltokenizer_test
 
 import (
-	"fmt"
 	"io"
 	"io/fs"
 	"math"
@@ -18,37 +17,36 @@ import (
 )
 
 func TestTokenOnGPXFiles(t *testing.T) {
-	err := filepath.Walk("testdata", func(path string, info fs.FileInfo, _ error) error {
-		if info.IsDir() {
-			return nil
-		}
-		if strings.ToLower(filepath.Ext(path)) != ".gpx" {
-			return nil
-		}
+	filepath.Walk("testdata", func(path string, info fs.FileInfo, _ error) error {
+		t.Run(path, func(t *testing.T) {
+			if info.IsDir() {
+				return
+			}
+			if strings.ToLower(filepath.Ext(path)) != ".gpx" {
+				return
+			}
 
-		gpx1, err := gpx.UnmarshalWithXMLTokenizer(path)
-		if err != nil {
-			return fmt.Errorf("xmltokenizer: %w", err)
-		}
+			gpx1, err := gpx.UnmarshalWithXMLTokenizer(path)
+			if err != nil {
+				t.Fatalf("xmltokenizer: %v", err)
+			}
 
-		gpx2, err := gpx.UnmarshalWithStdlibXML(path)
-		if err != nil {
-			return fmt.Errorf("xml: %w", err)
-		}
+			gpx2, err := gpx.UnmarshalWithStdlibXML(path)
+			if err != nil {
+				t.Fatalf("xml: %v", err)
+			}
 
-		if diff := cmp.Diff(gpx1, gpx2,
-			cmp.Transformer("float64", func(x float64) uint64 {
-				return math.Float64bits(x)
-			}),
-		); diff != "" {
-			t.Fatal(diff)
-		}
+			if diff := cmp.Diff(gpx1, gpx2,
+				cmp.Transformer("float64", func(x float64) uint64 {
+					return math.Float64bits(x)
+				}),
+			); diff != "" {
+				t.Fatal(diff)
+			}
+		})
 
 		return nil
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestTokenOnXLSXFiles(t *testing.T) {
@@ -68,7 +66,7 @@ func TestTokenOnXLSXFiles(t *testing.T) {
 	}
 }
 
-func TestAutoGrowBuffer(t *testing.T) {
+func TestAutoGrowBufferCorrectness(t *testing.T) {
 	path := filepath.Join("testdata", "xlsx_sheet1.xml")
 	f, err := os.Open(path)
 	if err != nil {
@@ -78,7 +76,6 @@ func TestAutoGrowBuffer(t *testing.T) {
 
 	tok := xmltokenizer.New(f,
 		xmltokenizer.WithReadBufferSize(5),
-		xmltokenizer.WithAttrBufferSize(0),
 	)
 
 	var token xmltokenizer.Token
@@ -113,4 +110,66 @@ loop:
 	if diff := cmp.Diff(sheetData1, sheetData2); diff != "" {
 		t.Fatal(err)
 	}
+}
+
+func TestXMLContainsCopyrightHeader(t *testing.T) {
+	path := filepath.Join("testdata", "copyright_header.xml")
+	f, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	tok := xmltokenizer.New(f)
+	token, err := tok.Token()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(token.Name.Local) != "<!--" {
+		t.Fatalf("expected name.Local: %q, got: %q", "<!--", string(token.Name.Local))
+	}
+	if string(token.Name.Full) != "<!--" {
+		t.Fatalf("expected name.Full: %q, got: %q", "<!--", string(token.Name.Full))
+	}
+	if string(token.Data) != "Copyright 2024 Example Licence Authors." {
+		t.Fatalf("expected CharData: %q, got: %q", "Copyright 2024 Example Licence Authors.",
+			string(token.Data))
+	}
+}
+
+func TestXMLContainsCDATA(t *testing.T) {
+	path := filepath.Join("testdata", "cdata.xml")
+	f, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	tok := xmltokenizer.New(f)
+	for {
+		token, err := tok.Token()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if string(token.Name.Local) == "data" {
+			token, err = tok.Token()
+			if err != nil {
+				t.Fatal(err)
+			}
+			const cdataIdent = "<![CDATA["
+			if string(token.Name.Local) != cdataIdent {
+				t.Fatalf("expected name.Local: %q, got: %q", cdataIdent, string(token.Name.Local))
+			}
+			if string(token.Name.Full) != cdataIdent {
+				t.Fatalf("expected name.Full: %q, got: %q", cdataIdent, string(token.Name.Full))
+			}
+			if string(token.Data) != "text" {
+				t.Fatalf("expected name.Full: %q, got: %q", "text", string(token.Name.Full))
+			}
+			break
+		}
+	}
+
 }
