@@ -17,11 +17,11 @@ func PutToken(t *Token) { pool.Put(t) }
 //   - <name attr="value" attr="value"/>
 //   - </name>
 //   - <!-- comment -->
-//   - <![CDATA[ chardata ]]>
+//   - <![CDATA[ some text ]]>
 type Token struct {
-	Name        Name   // Name: ProcInst: "?xml", StartElement: "name", EndElement: "/name".
+	Name        Name   // Name: ProcInst: "?xml", StartElement: "name", EndElement: "/name", Comment: "<!--", CDATA: "<![[CDATA", etc.
 	Attrs       []Attr // Attrs exist when len(Attrs) > 0.
-	CharData    []byte // CharData exist when len(CharData) > 0.
+	Data        []byte // Data could be a CharData, a comment, a CDATA, etc. Depends on identifier in Name.
 	SelfClosing bool   // True when tag end with "/>"" e.g. <c r="E3" s="1" /> instead of <c r="E3" s="1"></c>
 }
 
@@ -53,7 +53,7 @@ func (t *Token) Copy(src Token) *Token {
 	t.Name.Local = append(t.Name.Local[:0], src.Name.Local...)
 	t.Name.Full = append(t.Name.Full[:0], src.Name.Full...)
 	t.Attrs = append(t.Attrs[:0], src.Attrs...) // shallow copy
-	t.CharData = append(t.CharData[:0], src.CharData...)
+	t.Data = append(t.Data[:0], src.Data...)
 	t.SelfClosing = src.SelfClosing
 	return t
 }

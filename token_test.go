@@ -135,7 +135,7 @@ func TestCopy(t *testing.T) {
 			},
 			Value: []byte("bpm"),
 		}},
-		CharData: []byte("70"),
+		Data: []byte("70"),
 	}
 
 	var t2 xmltokenizer.Token
@@ -146,7 +146,7 @@ func TestCopy(t *testing.T) {
 	}
 
 	t2.Name.Full = append(t2.Name.Full[:0], "asd"...)
-	t2.CharData = append(t2.CharData[:0], "60"...)
+	t2.Data = append(t2.Data[:0], "60"...)
 	if diff := cmp.Diff(t2, t1); diff == "" {
 		t.Fatalf("expected different, got same")
 	}

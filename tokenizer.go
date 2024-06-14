@@ -2,28 +2,45 @@ package xmltokenizer
 
 import (
 	"errors"
+	"fmt"
 	"io"
+)
+
+type errorString string
+
+func (e errorString) Error() string { return string(e) }
+
+const (
+	errAutoGrowBufferExceedMaxLimit = errorString("auto grow buffer exceed max limit")
+)
+
+const (
+	defaultReadBufferSize      = 4 << 10
+	autoGrowBufferMaxLimitSize = 1000 << 10
+	defaultAttrsBufferSize     = 8
 )
 
 // Tokenizer is a XML tokenizer.
 type Tokenizer struct {
 	r         io.Reader // reader provided by the client
 	options   options   // tokenizer's options
-	buf       []byte    // buffer that will grow as needed
+	buf       []byte    // buffer that will grow as needed, large enough to hold a token (default max limit: 1MB)
 	cur, last int       // cur and last bytes positions
 	err       error     // last encountered error
 	token     Token     // shared token
 }
 
 type options struct {
-	readBufferSize  int
-	attrsBufferSize int
+	readBufferSize             int
+	autoGrowBufferMaxLimitSize int
+	attrsBufferSize            int
 }
 
 func defaultOptions() options {
 	return options{
-		readBufferSize:  4096,
-		attrsBufferSize: 8,
+		readBufferSize:             defaultReadBufferSize,
+		autoGrowBufferMaxLimitSize: autoGrowBufferMaxLimitSize,
+		attrsBufferSize:            defaultAttrsBufferSize,
 	}
 }
 
@@ -33,12 +50,27 @@ type Option func(o *options)
 // WithReadBufferSize directs XML Tokenizer to this buffer size
 // to read from the io.Reader. Default: 4096.
 func WithReadBufferSize(size int) Option {
+	if size <= 0 {
+		size = defaultReadBufferSize
+	}
 	return func(o *options) { o.readBufferSize = size }
+}
+
+// WithAutoGrowBufferMaxLimitSize directs XML Tokenizer to limit
+// auto grow buffer to not grow exceed this limit. Default: 1 MB.
+func WithAutoGrowBufferMaxLimitSize(size int) Option {
+	if size <= 0 {
+		size = autoGrowBufferMaxLimitSize
+	}
+	return func(o *options) { o.autoGrowBufferMaxLimitSize = size }
 }
 
 // WithAttrBufferSize directs XML Tokenizer to use this Attrs
 // buffer capacity as its initial size. Default: 8.
 func WithAttrBufferSize(size int) Option {
+	if size <= 0 {
+		size = defaultAttrsBufferSize
+	}
 	return func(o *options) { o.attrsBufferSize = size }
 }
 
@@ -60,6 +92,9 @@ func (t *Tokenizer) Reset(r io.Reader, opts ...Option) {
 	if cap(t.token.Attrs) < t.options.attrsBufferSize {
 		t.token.Attrs = make([]Attr, 0, t.options.attrsBufferSize)
 	}
+	if t.options.readBufferSize > t.options.autoGrowBufferMaxLimitSize {
+		t.options.autoGrowBufferMaxLimitSize = t.options.readBufferSize
+	}
 }
 
 // Token returns either a valid token or an error.
@@ -80,9 +115,12 @@ func (t *Tokenizer) Token() (Token, error) {
 
 	t.clearToken()
 
-	b = t.consumeTagName(b)
-	b = t.consumeAttrs(b)
-	t.token.CharData = trim(b)
+	b = t.consumeNonTagIdentifier(b)
+	if len(b) > 0 {
+		b = t.consumeTagName(b)
+		b = t.consumeAttrs(b)
+		t.token.Data = trim(b)
+	}
 
 	return t.token, nil
 }
@@ -92,6 +130,10 @@ func (t *Tokenizer) Token() (Token, error) {
 // The returned token bytes is only valid before next
 // Token or RawToken method invocation.
 func (t *Tokenizer) RawToken() (b []byte, err error) {
+	if t.err != nil {
+		return nil, err
+	}
+
 	pos := t.cur
 	var off int
 	for {
@@ -135,7 +177,7 @@ func (t *Tokenizer) clearToken() {
 	t.token.Name.Local = nil
 	t.token.Name.Full = nil
 	t.token.Attrs = t.token.Attrs[:0]
-	t.token.CharData = nil
+	t.token.Data = nil
 	t.token.SelfClosing = false
 }
 
@@ -150,14 +192,18 @@ func (t *Tokenizer) manageBuffer() error {
 	bufferSize := t.options.readBufferSize
 	switch {
 	case t.buf == nil:
-		// Create buffer twice of size in case we need to memmove remaining bytes
-		t.buf = make([]byte, bufferSize, bufferSize*2)
+		// Create buffer with additional cap in case we need to memmove remaining bytes
+		t.buf = make([]byte, bufferSize, bufferSize+defaultReadBufferSize)
 		end = bufferSize
 	case t.last+bufferSize <= cap(t.buf):
 		// Grow by reslice
 		t.buf = t.buf[: t.last+bufferSize : cap(t.buf)]
 		start, end = t.last, t.last+bufferSize
 	default:
+		if t.last+bufferSize > t.options.autoGrowBufferMaxLimitSize {
+			return fmt.Errorf("could not grow buffer, max limit is set to %d: %w",
+				t.options.autoGrowBufferMaxLimitSize, errAutoGrowBufferExceedMaxLimit)
+		}
 		// Grow by make new alloc
 		buf := make([]byte, t.last+bufferSize)
 		n := copy(buf, t.buf)
@@ -171,6 +217,39 @@ func (t *Tokenizer) manageBuffer() error {
 	}
 	t.buf = t.buf[: start+n : cap(t.buf)]
 	t.last = len(t.buf)
+
+	return nil
+}
+
+// consumeNonTagIdentifier consumes identifier starts with "<!": maybe a comment, maybe a CDATA, etc.
+func (t *Tokenizer) consumeNonTagIdentifier(b []byte) []byte {
+	if len(b) < 2 || string(b[:2]) != "<!" {
+		return b
+	}
+
+	var start int
+	for i := range b {
+		if b[i] == ' ' {
+			break
+		}
+		start++
+	}
+
+	// Identifier <!-- , <![CDATA[ , etc.
+	t.token.Name.Local = b[:start]
+	t.token.Name.Full = b[:start]
+
+	var end int = len(b)
+	for i := len(b) - 1; i >= 0; i-- {
+		switch b[i] {
+		case '>', '-', ']':
+			end--
+			continue
+		}
+		break
+	}
+
+	t.token.Data = trim(b[start:end])
 
 	return nil
 }
@@ -242,9 +321,7 @@ start:
 			if i+1 < len(b) && b[i+1] == '\n' {
 				start += 2
 			}
-		case '\n':
-			start++
-		case ' ':
+		case '\n', ' ':
 			start++
 		default:
 			break start

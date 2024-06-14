@@ -47,31 +47,31 @@ func (t *TrackPointExtension) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xm
 
 		switch string(token.Name.Local) {
 		case "cad", "cadence":
-			val, err := strconv.ParseUint(string(token.CharData), 10, 8)
+			val, err := strconv.ParseUint(string(token.Data), 10, 8)
 			if err != nil {
 				return err
 			}
 			t.Cadence = uint8(val)
 		case "distance":
-			val, err := strconv.ParseFloat(string(token.CharData), 64)
+			val, err := strconv.ParseFloat(string(token.Data), 64)
 			if err != nil {
 				return err
 			}
 			t.Distance = val
 		case "hr", "heartrate":
-			val, err := strconv.ParseUint(string(token.CharData), 10, 8)
+			val, err := strconv.ParseUint(string(token.Data), 10, 8)
 			if err != nil {
 				return err
 			}
 			t.HeartRate = uint8(val)
 		case "atemp", "temp", "temperature":
-			val, err := strconv.ParseInt(string(token.CharData), 10, 8)
+			val, err := strconv.ParseInt(string(token.Data), 10, 8)
 			if err != nil {
 				return err
 			}
 			t.Temperature = int8(val)
 		case "power":
-			val, err := strconv.ParseUint(string(token.CharData), 10, 16)
+			val, err := strconv.ParseUint(string(token.Data), 10, 16)
 			if err != nil {
 				return err
 			}

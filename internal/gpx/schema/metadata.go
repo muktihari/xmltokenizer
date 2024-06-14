@@ -37,9 +37,9 @@ func (m *Metadata) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.
 
 		switch string(token.Name.Local) {
 		case "name":
-			m.Name = string(token.CharData)
+			m.Name = string(token.Data)
 		case "desc":
-			m.Desc = string(token.CharData)
+			m.Desc = string(token.Data)
 		case "author":
 			m.Author = new(Author)
 			se := xmltokenizer.GetToken().Copy(token)
@@ -57,7 +57,7 @@ func (m *Metadata) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.
 				return fmt.Errorf("link: %w", err)
 			}
 		case "time":
-			m.Time, err = time.Parse(time.RFC3339, string(token.CharData))
+			m.Time, err = time.Parse(time.RFC3339, string(token.Data))
 			if err != nil {
 				return fmt.Errorf("time: %w", err)
 			}
@@ -142,7 +142,7 @@ func (a *Author) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.To
 
 		switch string(token.Name.Local) {
 		case "name":
-			a.Name = string(token.CharData)
+			a.Name = string(token.Data)
 		case "link":
 			a.Link = new(Link)
 			se := xmltokenizer.GetToken().Copy(token)
@@ -226,9 +226,9 @@ func (a *Link) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 
 		switch string(token.Name.Local) {
 		case "text":
-			a.Text = string(token.CharData)
+			a.Text = string(token.Data)
 		case "type":
-			a.Type = string(token.CharData)
+			a.Type = string(token.Data)
 		}
 	}
 
