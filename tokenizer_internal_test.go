@@ -111,3 +111,27 @@ func TestAutoGrowBuffer(t *testing.T) {
 		})
 	}
 }
+
+type fnReader func(b []byte) (n int, err error)
+
+func (f fnReader) Read(b []byte) (n int, err error) { return f(b) }
+
+func TestReset(t *testing.T) {
+	r := fnReader(func(b []byte) (n int, err error) { return len(b), nil })
+	tok := New(r)
+	tok.Token() // Trigger make buffer init
+
+	tok.Reset(r,
+		WithReadBufferSize(1024),
+		WithAutoGrowBufferMaxLimitSize(4),
+	)
+
+	if len(tok.buf) != 1024 {
+		t.Fatalf("expected len(t.buf): %d, got: %d", 1024, len(tok.buf))
+	}
+
+	if tok.cur != 0 && tok.last != 0 {
+		t.Fatalf("expected cur: %d, last: %d, got: cur: %d, last: %d",
+			0, 0, tok.cur, tok.last)
+	}
+}

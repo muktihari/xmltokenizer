@@ -85,15 +85,25 @@ func New(r io.Reader, opts ...Option) *Tokenizer {
 // future tokenization to reduce memory alloc.
 func (t *Tokenizer) Reset(r io.Reader, opts ...Option) {
 	t.r, t.err = r, nil
+	t.cur, t.last = 0, 0
+
 	t.options = defaultOptions()
 	for i := range opts {
 		opts[i](&t.options)
 	}
+
 	if cap(t.token.Attrs) < t.options.attrsBufferSize {
 		t.token.Attrs = make([]Attr, 0, t.options.attrsBufferSize)
 	}
 	if t.options.readBufferSize > t.options.autoGrowBufferMaxLimitSize {
 		t.options.autoGrowBufferMaxLimitSize = t.options.readBufferSize
+	}
+
+	switch {
+	case t.buf != nil:
+		t.buf = t.buf[:t.options.readBufferSize:cap(t.buf)]
+	case cap(t.buf) < t.options.readBufferSize+defaultAttrsBufferSize:
+		t.buf = nil // Directs the Tokenizer to re-alloc.
 	}
 }
 
