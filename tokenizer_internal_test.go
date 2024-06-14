@@ -119,19 +119,37 @@ func (f fnReader) Read(b []byte) (n int, err error) { return f(b) }
 func TestReset(t *testing.T) {
 	r := fnReader(func(b []byte) (n int, err error) { return len(b), nil })
 	tok := New(r)
-	tok.Token() // Trigger make buffer init
+	tok.Token() // Trigger make buffer init, cause grow buffer by alloc up to max limit: 1MB
 
 	tok.Reset(r,
 		WithReadBufferSize(1024),
 		WithAutoGrowBufferMaxLimitSize(4),
 	)
 
-	if len(tok.buf) != 1024 {
-		t.Fatalf("expected len(t.buf): %d, got: %d", 1024, len(tok.buf))
+	if expected := 1024; len(tok.buf) != expected {
+		t.Fatalf("expected len(t.buf): %d, got: %d", expected, len(tok.buf))
+	}
+	if expected := 1000 << 10; cap(tok.buf) != expected {
+		t.Fatalf("expected cap(t.buf): %d, got: %d", expected, cap(tok.buf))
 	}
 
 	if tok.cur != 0 && tok.last != 0 {
 		t.Fatalf("expected cur: %d, last: %d, got: cur: %d, last: %d",
 			0, 0, tok.cur, tok.last)
+	}
+
+	newBufferSize := 2000 << 10
+	tok.Reset(r,
+		WithReadBufferSize(newBufferSize),
+		WithAutoGrowBufferMaxLimitSize(4),
+	)
+
+	tok.Token() // Trigger manageBuffer
+
+	if expected := newBufferSize; len(tok.buf) != expected {
+		t.Fatalf("expected len(t.buf): %d, got: %d", expected, len(tok.buf))
+	}
+	if expected := newBufferSize + defaultReadBufferSize; cap(tok.buf) != expected {
+		t.Fatalf("expected len(t.buf): %d, got: %d", expected, len(tok.buf))
 	}
 }
