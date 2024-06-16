@@ -14,15 +14,19 @@ func PutToken(t *Token) { pool.Put(t) }
 //   - <?xml version="1.0" encoding="UTF-8"?>
 //   - <name attr="value" attr="value">
 //   - <name attr="value" attr="value">CharData
+//   - <name attr="value" attr="value"><![CDATA[ CharData ]]>
 //   - <name attr="value" attr="value"/>
 //   - </name>
-//   - <!-- comment -->
-//   - <![CDATA[ some text ]]>
+//   - <!-- a comment -->
+//   - <!DOCTYPE library [
+//     <!ELEMENT library (book+)>
+//     <!ELEMENT book (title, author, year)>
+//     ]>
 type Token struct {
-	Name        Name   // Name: ProcInst: "?xml", StartElement: "name", EndElement: "/name", Comment: "<!--", CDATA: "<![[CDATA", etc.
+	Name        Name   // Name can be a StartElement: "name", a EndElement: "/name" or empty when a tag starts with "<?" or "<!" (except "<![CDATA").
 	Attrs       []Attr // Attrs exist when len(Attrs) > 0.
-	Data        []byte // Data could be a CharData, a comment, a CDATA, etc. Depends on identifier in Name.
-	SelfClosing bool   // True when tag end with "/>"" e.g. <c r="E3" s="1" /> instead of <c r="E3" s="1"></c>
+	Data        []byte // Data could be a CharData or a CDATA, or maybe a RawToken if a tag starts with "<?" or "<!" (except "<![CDATA").
+	SelfClosing bool   // True when a tag ends with "/>" e.g. <c r="E3" s="1" />. Also true when a tag starts with "<?" or "<!" (except "<![CDATA").
 }
 
 // IsEndElement checks whether the given token represent an end element (closing tag),
