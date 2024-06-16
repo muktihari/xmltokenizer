@@ -175,7 +175,9 @@ func (t *Tokenizer) RawToken() (b []byte, err error) {
 				if i >= t.last {
 					prevLast := t.last
 					off, i = t.memmoveRemainingBytes(off)
-					dtdOff = dtdOff - (prevLast - t.last)
+					if dtdOff != 0 {
+						dtdOff = dtdOff - (prevLast - t.last)
+					}
 					if err = t.manageBuffer(); err != nil {
 						t.err = err
 						break
@@ -193,7 +195,7 @@ func (t *Tokenizer) RawToken() (b []byte, err error) {
 				case ']':
 					dtdOff = i
 				case '>':
-					if dtdOff == i-1 && t.buf[dtdOff] == ']' {
+					if t.buf[dtdOff] == ']' {
 						buf := trim(t.buf[off : i+1 : cap(t.buf)])
 						t.cur = i + 1
 						return buf, err
