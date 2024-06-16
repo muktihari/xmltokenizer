@@ -234,8 +234,6 @@ func (t *Tokenizer) RawToken() (b []byte, err error) {
 							k++
 							continue
 						}
-						xx := string(t.buf[off : j+1])
-						_ = xx
 						if t.buf[j] == '>' && string(t.buf[j-2:j+1]) == suffix {
 							pos = j
 							break
