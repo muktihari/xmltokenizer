@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<data>
-  <![CDATA[ text ]]>
-</data>
+<content>
+  <data>
+    <![CDATA[ text ]]>
+  </data>
+  <data>
+    <![CDATA[<element>text</element>]]>
+  </data>
+  <data>
+    <![CDATA[
+      <element>text</element>
+    ]]>
+  </data>
+</content>

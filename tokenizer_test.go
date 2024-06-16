@@ -26,12 +26,44 @@ func TestSmallXML(t *testing.T) {
 	}{
 		{filename: "cdata.xml", expecteds: []xmltokenizer.Token{
 			tokenHeader,
+			{Name: xmltokenizer.Name{Local: []byte("content"), Full: []byte("content")}},
 			{
 				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
 				Data: []byte("text"),
 			},
-			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}}},
-		},
+			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{
+				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				Data: []byte("<element>text</element>"),
+			},
+			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{
+				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				Data: []byte("<element>text</element>"),
+			},
+			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{Name: xmltokenizer.Name{Local: []byte("/content"), Full: []byte("/content")}},
+		}},
+		{filename: "cdata_clrf.xml", expecteds: []xmltokenizer.Token{
+			tokenHeader,
+			{Name: xmltokenizer.Name{Local: []byte("content"), Full: []byte("content")}},
+			{
+				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				Data: []byte("text"),
+			},
+			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{
+				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				Data: []byte("<element>text</element>"),
+			},
+			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{
+				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				Data: []byte("<element>text</element>"),
+			},
+			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{Name: xmltokenizer.Name{Local: []byte("/content"), Full: []byte("/content")}},
+		}},
 		{filename: "self_closing.xml", expecteds: []xmltokenizer.Token{
 			tokenHeader,
 			{Name: xmltokenizer.Name{Local: []byte("a"), Full: []byte("a")}, SelfClosing: true},

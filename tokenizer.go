@@ -185,7 +185,6 @@ func (t *Tokenizer) RawToken() (b []byte, err error) {
 				}
 				if k < len(prefix) {
 					if t.buf[i] != prefix[k] {
-						k = 0
 						break
 					}
 					k++
@@ -216,7 +215,7 @@ func (t *Tokenizer) RawToken() (b []byte, err error) {
 				if t.buf[i] == '<' {
 					pos = i - 1
 					// Might be in the form of <![CDATA[ CharData ]]>
-					const prefix = "<![CDATA["
+					const prefix, suffix = "<![CDATA[", "]]>"
 					var k int = 1
 					for j := i + 1; ; j++ {
 						if j >= t.last {
@@ -235,7 +234,9 @@ func (t *Tokenizer) RawToken() (b []byte, err error) {
 							k++
 							continue
 						}
-						if t.buf[j] == '>' {
+						xx := string(t.buf[off : j+1])
+						_ = xx
+						if t.buf[j] == '>' && string(t.buf[j-2:j+1]) == suffix {
 							pos = j
 							break
 						}
@@ -384,11 +385,12 @@ func trim(b []byte) []byte {
 
 func trimPrefix(b []byte) []byte {
 	var start int
-	for i := range b {
+	for i := 0; i < len(b); i++ {
 		switch b[i] {
 		case '\r':
 			if i+1 < len(b) && b[i+1] == '\n' {
 				start += 2
+				i++
 			}
 		case '\n', ' ':
 			start++
