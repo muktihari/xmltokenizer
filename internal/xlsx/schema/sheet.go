@@ -1,7 +1,7 @@
 package schema
 
 import (
-	"io"
+	"fmt"
 	"strconv"
 
 	"github.com/muktihari/xmltokenizer"
@@ -14,11 +14,8 @@ type SheetData struct {
 func (s *SheetData) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token) error {
 	for {
 		token, err := tok.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
-			return err
+			return fmt.Errorf("sheetData: %w", err)
 		}
 
 		if token.IsEndElementOf(se) {
@@ -35,7 +32,7 @@ func (s *SheetData) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer
 			err = row.UnmarshalToken(tok, se)
 			xmltokenizer.PutToken(se)
 			if err != nil {
-				return err
+				return fmt.Errorf("row: %w", err)
 			}
 			s.Rows = append(s.Rows, row)
 		}
@@ -63,11 +60,8 @@ func (r *Row) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token
 
 	for {
 		token, err := tok.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
-			return err
+			return fmt.Errorf("row: %w", err)
 		}
 
 		if token.IsEndElementOf(se) {
@@ -84,7 +78,7 @@ func (r *Row) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token
 			err = cell.UnmarshalToken(tok, se)
 			xmltokenizer.PutToken(se)
 			if err != nil {
-				return err
+				return fmt.Errorf("c: %w", err)
 			}
 			r.Cells = append(r.Cells, cell)
 		}
@@ -111,7 +105,7 @@ func (c *Cell) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 		case "s":
 			c.Style, err = strconv.Atoi(string(attr.Value))
 			if err != nil {
-				return err
+				return fmt.Errorf("s: %w", err)
 			}
 		case "t":
 			c.Type = string(attr.Value)
@@ -126,11 +120,8 @@ func (c *Cell) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 
 	for {
 		token, err := tok.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
-			return err
+			return fmt.Errorf("cell: %w", err)
 		}
 
 		if token.IsEndElementOf(se) {

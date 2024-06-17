@@ -23,36 +23,43 @@ We can write the Go implementation like following:
 package main
 
 import (
+    "bytes"
     "fmt"
     "io"
-    "os"
     "strconv"
 
     "github.com/muktihari/xmltokenizer"
 )
 
+const sample = `<?xml version="1.0" encoding="UTF-8"?>
+<row r="1">
+  <c r="A1">
+    <v>0</v>
+  </c>
+  <c r="B1">
+    <v>4</v>
+  </c>
+  <c r="C1" />
+</row>`
+
 func main() {
-    f, err := os.Open("sheet1.xml")
-    if err != nil {
-        panic(err)
-    }
-    defer f.Close()
+    f := bytes.NewReader([]byte(sample))
 
     tok := xmltokenizer.New(f)
     var row Row
 loop:
     for {
-        token, err := tok.Token()
+        token, err := tok.Token() // Token is only valid until next tok.Token() invocation (short-lived object).
         if err == io.EOF {
             break
         }
         if err != nil {
             panic(err)
         }
-        switch string(token.Name.Local) { // This do not allocate 🙂👍
+        switch string(token.Name.Local) { // This do not allocate 🥳👍
         case "row":
             // Reuse Token object in the sync.Pool since we only use it temporarily.
-            se := xmltokenizer.GetToken().Copy(token)
+            se := xmltokenizer.GetToken().Copy(token) // se: StartElement, we should copy it since token is a short-lived object.
             err = row.UnmarshalToken(tok, se)
             xmltokenizer.PutToken(se) // Put back to sync.Pool.
             if err != nil {
@@ -86,14 +93,11 @@ func (r *Row) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token
 
     for {
         token, err := tok.Token()
-        if err == io.EOF {
-            break
-        }
         if err != nil {
             return err
         }
         if token.IsEndElementOf(se) { // Reach desired EndElement
-            break
+            return nil
         }
         if token.IsEndElement() { // Ignore child's EndElements
             continue
@@ -111,7 +115,6 @@ func (r *Row) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token
             r.Cells = append(r.Cells, cell)
         }
     }
-    return nil
 }
 
 type Cell struct {
@@ -136,23 +139,22 @@ func (c *Cell) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 
     for {
         token, err := tok.Token()
-        if err == io.EOF {
-            break
-        }
         if err != nil {
             return err
         }
         if token.IsEndElementOf(se) { // Reach desired EndElement
-            break
+            return nil
         }
         if token.IsEndElement() { // Ignore child's EndElements
             continue
         }
         switch string(token.Name.Local) {
         case "v":
-            c.Value = string(token.CharData)
+            c.Value = string(token.Data)
         }
     }
-    return nil
 }
+
 ```
+
+You can find more examples in [internal](../internal/README.md) package.

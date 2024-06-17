@@ -3,7 +3,6 @@ package schema
 import (
 	"encoding/xml"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/muktihari/xmltokenizer"
@@ -21,11 +20,8 @@ type Metadata struct {
 func (m *Metadata) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token) error {
 	for {
 		token, err := tok.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
-			return err
+			return fmt.Errorf("metadata: %w", err)
 		}
 
 		if token.IsEndElementOf(se) {
@@ -63,19 +59,13 @@ func (m *Metadata) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.
 			}
 		}
 	}
-
-	return nil
 }
 
 func (m *Metadata) UnmarshalXML(dec *xml.Decoder, se xml.StartElement) error {
-	var targetCharData string
 	for {
 		token, err := dec.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
-			return err
+			return fmt.Errorf("metadata: %w", err)
 		}
 
 		switch elem := token.(type) {
@@ -86,35 +76,35 @@ func (m *Metadata) UnmarshalXML(dec *xml.Decoder, se xml.StartElement) error {
 				if err := m.Author.UnmarshalXML(dec, elem); err != nil {
 					return fmt.Errorf("author: %w", err)
 				}
+				continue
 			case "link":
 				m.Link = new(Link)
 				if err := m.Link.UnmarshalXML(dec, elem); err != nil {
 					return fmt.Errorf("link: %w", err)
 				}
-			default:
-				targetCharData = elem.Name.Local
+				continue
 			}
-		case xml.CharData:
-			switch targetCharData {
+			charData, err := getCharData(dec)
+			if err != nil {
+				return err
+			}
+			switch elem.Name.Local {
 			case "name":
-				m.Name = string(elem)
+				m.Name = string(charData)
 			case "desc":
-				m.Desc = string(elem)
+				m.Desc = string(charData)
 			case "time":
-				m.Time, err = time.Parse(time.RFC3339, string(elem))
+				m.Time, err = time.Parse(time.RFC3339, string(charData))
 				if err != nil {
 					return fmt.Errorf("time: %w", err)
 				}
 			}
-			targetCharData = ""
 		case xml.EndElement:
 			if elem == se.End() {
 				return nil
 			}
 		}
 	}
-
-	return nil
 }
 
 // Author is Author schema (simplified).
@@ -126,9 +116,6 @@ type Author struct {
 func (a *Author) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token) error {
 	for {
 		token, err := tok.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
 			return fmt.Errorf("author: %w", err)
 		}
@@ -153,16 +140,13 @@ func (a *Author) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.To
 			}
 		}
 	}
-
-	return nil
 }
 
 func (a *Author) UnmarshalXML(dec *xml.Decoder, se xml.StartElement) error {
-	var targetCharData string
 	for {
 		token, err := dec.Token()
 		if err != nil {
-			return err
+			return fmt.Errorf("author: %w", err)
 		}
 
 		switch elem := token.(type) {
@@ -173,15 +157,13 @@ func (a *Author) UnmarshalXML(dec *xml.Decoder, se xml.StartElement) error {
 				if err := a.Link.UnmarshalXML(dec, elem); err != nil {
 					return fmt.Errorf("link: %w", err)
 				}
-			default:
-				targetCharData = elem.Name.Local
-			}
-		case xml.CharData:
-			switch targetCharData {
 			case "name":
-				a.Name = string(elem)
+				charData, err := getCharData(dec)
+				if err != nil {
+					return fmt.Errorf("name: %w", err)
+				}
+				a.Name = string(charData)
 			}
-			targetCharData = ""
 		case xml.EndElement:
 			if elem == se.End() {
 				return nil
@@ -210,9 +192,6 @@ func (a *Link) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 
 	for {
 		token, err := tok.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
 			return fmt.Errorf("link: %w", err)
 		}
@@ -231,8 +210,6 @@ func (a *Link) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 			a.Type = string(token.Data)
 		}
 	}
-
-	return nil
 }
 
 func (a *Link) UnmarshalXML(dec *xml.Decoder, se xml.StartElement) error {
@@ -244,33 +221,28 @@ func (a *Link) UnmarshalXML(dec *xml.Decoder, se xml.StartElement) error {
 		}
 	}
 
-	var targetCharData string
 	for {
 		token, err := dec.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
-			return err
+			return fmt.Errorf("link: %w", err)
 		}
 
 		switch elem := token.(type) {
 		case xml.StartElement:
-			targetCharData = elem.Name.Local
-		case xml.CharData:
-			switch targetCharData {
-			case "text":
-				a.Text = string(elem)
-			case "type":
-				a.Type = string(elem)
+			charData, err := getCharData(dec)
+			if err != nil {
+				return fmt.Errorf("%s: %w", elem.Name.Local, err)
 			}
-			targetCharData = ""
+			switch elem.Name.Local {
+			case "text":
+				a.Text = string(charData)
+			case "type":
+				a.Type = string(charData)
+			}
 		case xml.EndElement:
 			if elem == se.End() {
 				return nil
 			}
 		}
 	}
-
-	return nil
 }
