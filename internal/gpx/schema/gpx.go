@@ -3,7 +3,6 @@ package schema
 import (
 	"encoding/xml"
 	"fmt"
-	"io"
 
 	"github.com/muktihari/xmltokenizer"
 )
@@ -29,11 +28,8 @@ func (g *GPX) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token
 
 	for {
 		token, err := tok.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
-			return err
+			return fmt.Errorf("gpx: %w", err)
 		}
 
 		if token.IsEndElementOf(se) {
@@ -62,8 +58,6 @@ func (g *GPX) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token
 			g.Tracks = append(g.Tracks, track)
 		}
 	}
-
-	return nil
 }
 
 func (g *GPX) UnmarshalXML(dec *xml.Decoder, se xml.StartElement) error {
@@ -79,11 +73,8 @@ func (g *GPX) UnmarshalXML(dec *xml.Decoder, se xml.StartElement) error {
 
 	for {
 		token, err := dec.Token()
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
-			return err
+			return fmt.Errorf("gpx: %w", err)
 		}
 
 		switch elem := token.(type) {
@@ -107,6 +98,4 @@ func (g *GPX) UnmarshalXML(dec *xml.Decoder, se xml.StartElement) error {
 			}
 		}
 	}
-
-	return nil
 }
