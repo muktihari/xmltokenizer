@@ -1,6 +1,8 @@
 package xmltokenizer_test
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -19,10 +21,156 @@ import (
 
 var tokenHeader = xmltokenizer.Token{Data: []byte(`<?xml version="1.0" encoding="UTF-8"?>`), SelfClosing: true}
 
-func TestSmallXML(t *testing.T) {
+func TestTokenWithInmemXML(t *testing.T) {
+	tt := []struct {
+		name      string
+		xml       string
+		expecteds []xmltokenizer.Token
+		err       error
+	}{
+		{
+			name: "dtd without entity",
+			xml: `
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<body xmlns:foo="ns1" xmlns="ns2" xmlns:tag="ns3" ` +
+				"\r\n\t" + `  >
+	<hello lang="en">World &lt;&gt;&apos;&quot; &#x767d;&#40300;翔</hello>
+	<query>&何; &is-it;</query>
+	<goodbye />
+	<outer foo:attr="value" xmlns:tag="ns4">
+	<inner/>
+	</outer>
+	<tag:name>
+	<![CDATA[Some text here.]]>
+	</tag:name>
+</body><!-- missing final newline -->`, // Note: retrieved from stdlib xml test.
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []byte(`<?xml version="1.0" encoding="UTF-8"?>`),
+					SelfClosing: true,
+				},
+				{
+					Data: []byte("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n" +
+						"	\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"),
+					SelfClosing: true,
+				},
+				{
+					Name: xmltokenizer.Name{Local: []byte("body"), Full: []byte("body")},
+					Attrs: []xmltokenizer.Attr{
+						{Name: xmltokenizer.Name{Space: []byte("xmlns"), Local: []byte("foo"), Full: []byte("xmlns:foo")}, Value: []byte("ns1")},
+						{Name: xmltokenizer.Name{Local: []byte("xmlns"), Full: []byte("xmlns")}, Value: []byte("ns2")},
+						{Name: xmltokenizer.Name{Space: []byte("xmlns"), Local: []byte("tag"), Full: []byte("xmlns:tag")}, Value: []byte("ns3")},
+					},
+				},
+				{
+					Name: xmltokenizer.Name{Local: []byte("hello"), Full: []byte("hello")},
+					Attrs: []xmltokenizer.Attr{
+						{Name: xmltokenizer.Name{Local: []byte("lang"), Full: []byte("lang")}, Value: []byte("en")},
+					},
+					Data: []byte("World &lt;&gt;&apos;&quot; &#x767d;&#40300;翔"),
+				},
+				{
+					Name: xmltokenizer.Name{Local: []byte("/hello"), Full: []byte("/hello")},
+				},
+				{
+					Name: xmltokenizer.Name{Local: []byte("query"), Full: []byte("query")},
+					Data: []byte("&何; &is-it;"),
+				},
+				{
+					Name: xmltokenizer.Name{Local: []byte("/query"), Full: []byte("/query")},
+				},
+				{
+					Name:        xmltokenizer.Name{Local: []byte("goodbye"), Full: []byte("goodbye")},
+					SelfClosing: true,
+				},
+				{
+					Name: xmltokenizer.Name{Local: []byte("outer"), Full: []byte("outer")},
+					Attrs: []xmltokenizer.Attr{
+						{Name: xmltokenizer.Name{Space: []byte("foo"), Local: []byte("attr"), Full: []byte("foo:attr")}, Value: []byte("value")},
+						{Name: xmltokenizer.Name{Space: []byte("xmlns"), Local: []byte("tag"), Full: []byte("xmlns:tag")}, Value: []byte("ns4")},
+					},
+				},
+				{
+					Name:        xmltokenizer.Name{Local: []byte("inner"), Full: []byte("inner")},
+					SelfClosing: true,
+				},
+				{
+					Name: xmltokenizer.Name{Local: []byte("/outer"), Full: []byte("/outer")},
+				},
+				{
+					Name: xmltokenizer.Name{Space: []byte("tag"), Local: []byte("name"), Full: []byte("tag:name")},
+					Data: []byte("Some text here."),
+				},
+				{
+					Name: xmltokenizer.Name{Space: []byte("/tag"), Local: []byte("name"), Full: []byte("/tag:name")},
+				},
+				{
+					Name: xmltokenizer.Name{Local: []byte("/body"), Full: []byte("/body")},
+				},
+				{
+					Data:        []byte("<!-- missing final newline -->"),
+					SelfClosing: true,
+				},
+			},
+		},
+		{
+			name: "unexpected EOF truncated XML after `<!`",
+			xml:  "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!",
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []byte(`<?xml version="1.0" encoding="UTF-8"?>`),
+					SelfClosing: true,
+				},
+			},
+			err: io.ErrUnexpectedEOF,
+		},
+		{
+			name: "unexpected quote before attr name",
+			xml:  "<?xml version=\"1.0\" encoding=\"UTF-8\"?><a =\"ns2\"></a>",
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []byte(`<?xml version="1.0" encoding="UTF-8"?>`),
+					SelfClosing: true,
+				},
+				{Name: xmltokenizer.Name{Local: []byte("a"), Full: []byte("a")}},
+				{Name: xmltokenizer.Name{Local: []byte("/a"), Full: []byte("/a")}},
+			},
+		},
+	}
+
+	for i, tc := range tt {
+		t.Run(fmt.Sprintf("[%d]: %s", i, tc.name), func(t *testing.T) {
+			tok := xmltokenizer.New(
+				bytes.NewReader([]byte(tc.xml)),
+				xmltokenizer.WithReadBufferSize(1), // Read per char so we can cover more code paths
+			)
+
+			for i := 0; ; i++ {
+				token, err := tok.Token()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					if !errors.Is(err, tc.err) {
+						t.Fatalf("expected error: %v, got: %v", tc.err, err)
+					}
+					return
+				}
+				if diff := cmp.Diff(token, tc.expecteds[i]); diff != "" {
+					t.Fatalf("%d: %s", i, diff)
+				}
+			}
+		})
+	}
+}
+
+func TestTokenWithSmallXMLFiles(t *testing.T) {
 	tt := []struct {
 		filename  string
 		expecteds []xmltokenizer.Token
+		err       error
 	}{
 		{filename: "cdata.xml", expecteds: []xmltokenizer.Token{
 			tokenHeader,
@@ -64,6 +212,15 @@ func TestSmallXML(t *testing.T) {
 			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
 			{Name: xmltokenizer.Name{Local: []byte("/content"), Full: []byte("/content")}},
 		}},
+		{filename: filepath.Join("corrupted", "cdata_truncated.xml"), expecteds: []xmltokenizer.Token{
+			tokenHeader,
+			{Name: xmltokenizer.Name{Local: []byte("content"), Full: []byte("content")}},
+			{
+				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+			},
+		},
+			err: io.ErrUnexpectedEOF,
+		},
 		{filename: "self_closing.xml", expecteds: []xmltokenizer.Token{
 			tokenHeader,
 			{Name: xmltokenizer.Name{Local: []byte("a"), Full: []byte("a")}, SelfClosing: true},
@@ -114,8 +271,12 @@ func TestSmallXML(t *testing.T) {
 					break
 				}
 				if err != nil {
-					t.Fatal(err)
+					if !errors.Is(err, tc.err) {
+						t.Fatalf("expected error: %v, got: %v", tc.err, err)
+					}
+					return
 				}
+
 				if diff := cmp.Diff(token, tc.expecteds[i]); diff != "" {
 					t.Fatal(diff)
 				}
@@ -183,7 +344,7 @@ func TestAutoGrowBufferCorrectness(t *testing.T) {
 	defer f.Close()
 
 	tok := xmltokenizer.New(f,
-		xmltokenizer.WithReadBufferSize(5),
+		xmltokenizer.WithReadBufferSize(1),
 	)
 
 	var token xmltokenizer.Token
@@ -218,4 +379,100 @@ loop:
 	if diff := cmp.Diff(sheetData1, sheetData2); diff != "" {
 		t.Fatal(err)
 	}
+}
+
+func TestRawTokenWithInmemXML(t *testing.T) {
+	tt := []struct {
+		name      string
+		xml       string
+		expecteds []string
+		err       error
+	}{
+		{
+			name: "simple xml happy flow",
+			xml: `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<body xmlns:foo="ns1" xmlns="ns2" xmlns:tag="ns3" ` +
+				"\r\n\t" + `  >
+	<hello lang="en">World &lt;&gt;&apos;&quot; &#x767d;&#40300;翔</hello>
+	<query>&何; &is-it;</query>
+	<goodbye />
+	<outer foo:attr="value" xmlns:tag="ns4">
+	<inner/>
+	</outer>
+	<tag:name>
+	<![CDATA[Some text here.]]>
+	</tag:name>
+</body><!-- missing final newline -->`, // Note: retrieved from stdlib xml test.
+			expecteds: []string{
+				"<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+				"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n" +
+					"	\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">",
+				"<body xmlns:foo=\"ns1\" xmlns=\"ns2\" xmlns:tag=\"ns3\" " +
+					"\r\n\t" + "  >",
+				"<hello lang=\"en\">World &lt;&gt;&apos;&quot; &#x767d;&#40300;翔",
+				"</hello>",
+				"<query>&何; &is-it;",
+				"</query>",
+				"<goodbye />",
+				"<outer foo:attr=\"value\" xmlns:tag=\"ns4\">",
+				"<inner/>",
+				"</outer>",
+				"<tag:name>\n	<![CDATA[Some text here.]]>",
+				"</tag:name>",
+				"</body>",
+				"<!-- missing final newline -->",
+			},
+		},
+		{
+			name: "unexpected EOF truncated XML after `<!`",
+			xml:  "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!",
+			expecteds: []string{
+				"<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+				"<!",
+			},
+			err: io.ErrUnexpectedEOF,
+		},
+	}
+
+	for i, tc := range tt {
+		t.Run(fmt.Sprintf("[%d]: %s", i, tc.name), func(t *testing.T) {
+			tok := xmltokenizer.New(
+				bytes.NewReader([]byte(tc.xml)),
+				xmltokenizer.WithReadBufferSize(1), // Read per char so we can cover more code paths
+			)
+
+			for i := 0; ; i++ {
+				token, err := tok.RawToken()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					if !errors.Is(err, tc.err) {
+						t.Fatalf("expected error: %v, got: %v", tc.err, err)
+					}
+					return
+				}
+				if diff := cmp.Diff(string(token), tc.expecteds[i]); diff != "" {
+					t.Fatal(diff)
+				}
+			}
+		})
+	}
+
+	t.Run("with prior error", func(t *testing.T) {
+		// Test in case RawToken() is reinvoked when there is prior error.
+		tok := xmltokenizer.New(bytes.NewReader([]byte{}))
+		token, err := tok.RawToken()
+		if err != io.EOF {
+			t.Fatalf("expected error: %v, got: %v", io.EOF, err)
+		}
+		_ = token
+		token, err = tok.RawToken() // Reinvoke
+		if err != io.EOF {
+			t.Fatalf("expected error: %v, got: %v", io.EOF, err)
+		}
+		_ = token
+	})
 }
