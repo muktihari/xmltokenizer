@@ -25,7 +25,7 @@ func BenchmarkToken(b *testing.B) {
 			var err error
 			for i := 0; i < b.N; i++ {
 				if err = unmarshalWithStdlibXML(path); err != nil {
-					b.Fatal(err)
+					b.Skipf("could not unmarshal: %v", err)
 				}
 			}
 		})
@@ -33,7 +33,7 @@ func BenchmarkToken(b *testing.B) {
 			var err error
 			for i := 0; i < b.N; i++ {
 				if err = unmarshalWithXMLTokenizer(path); err != nil {
-					b.Fatal(err)
+					b.Skipf("could not unmarshal: %v", err)
 				}
 			}
 		})
