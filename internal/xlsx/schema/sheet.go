@@ -21,7 +21,7 @@ func (s *SheetData) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer
 		if token.IsEndElementOf(se) {
 			break
 		}
-		if token.IsEndElement() {
+		if token.IsEndElement {
 			continue
 		}
 
@@ -67,7 +67,7 @@ func (r *Row) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token
 		if token.IsEndElementOf(se) {
 			break
 		}
-		if token.IsEndElement() {
+		if token.IsEndElement {
 			continue
 		}
 
@@ -127,7 +127,7 @@ func (c *Cell) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 		if token.IsEndElementOf(se) {
 			break
 		}
-		if token.IsEndElement() {
+		if token.IsEndElement {
 			continue
 		}
 

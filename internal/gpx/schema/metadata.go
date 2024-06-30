@@ -27,7 +27,7 @@ func (m *Metadata) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.
 		if token.IsEndElementOf(se) {
 			return nil
 		}
-		if token.IsEndElement() {
+		if token.IsEndElement {
 			continue
 		}
 
@@ -123,7 +123,7 @@ func (a *Author) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.To
 		if token.IsEndElementOf(se) {
 			return nil
 		}
-		if token.IsEndElement() {
+		if token.IsEndElement {
 			continue
 		}
 
@@ -199,7 +199,7 @@ func (a *Link) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 		if token.IsEndElementOf(se) {
 			return nil
 		}
-		if token.IsEndElement() {
+		if token.IsEndElement {
 			continue
 		}
 

@@ -38,7 +38,7 @@ func (t *TrackpointExtension) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xm
 		if token.IsEndElementOf(se) {
 			return nil
 		}
-		if token.IsEndElement() {
+		if token.IsEndElement {
 			continue
 		}
 
