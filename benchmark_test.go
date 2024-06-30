@@ -31,7 +31,7 @@ func BenchmarkToken(b *testing.B) {
 		b.Run(fmt.Sprintf("stdlib.xml:%q", name), func(b *testing.B) {
 			var err error
 			for i := 0; i < b.N; i++ {
-				if err = unmarshalWithStdlibXML(bytes.NewReader(data)); err != nil {
+				if err = unmarshal(xml.NewDecoder(bytes.NewReader(data))); err != nil {
 					b.Skipf("could not unmarshal: %v", err)
 				}
 			}
@@ -39,7 +39,7 @@ func BenchmarkToken(b *testing.B) {
 		b.Run(fmt.Sprintf("xmltokenizer:%q", name), func(b *testing.B) {
 			var err error
 			for i := 0; i < b.N; i++ {
-				if err = unmarshalWithXMLTokenizer(bytes.NewReader(data)); err != nil {
+				if err = unmarshal(xmltokenizer.New(bytes.NewReader(data))); err != nil {
 					b.Skipf("could not unmarshal: %v", err)
 				}
 			}
@@ -48,25 +48,9 @@ func BenchmarkToken(b *testing.B) {
 	})
 }
 
-func unmarshalWithXMLTokenizer(r io.Reader) error {
-	tok := xmltokenizer.New(r)
+func unmarshal[Token any, Tokenizer interface{ Token() (Token, error) }](tok Tokenizer) error {
 	for {
 		token, err := tok.Token()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		_ = token
-	}
-	return nil
-}
-
-func unmarshalWithStdlibXML(r io.Reader) error {
-	dec := xml.NewDecoder(r)
-	for {
-		token, err := dec.Token()
 		if err == io.EOF {
 			break
 		}
