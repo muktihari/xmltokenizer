@@ -324,12 +324,17 @@ func TestTokenOnGPXFiles(t *testing.T) {
 				return
 			}
 
-			gpx1, err := gpx.UnmarshalWithXMLTokenizer(path)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Skip(err)
+			}
+
+			gpx1, err := gpx.UnmarshalWithXMLTokenizer(bytes.NewReader(data))
 			if err != nil {
 				t.Fatalf("xmltokenizer: %v", err)
 			}
 
-			gpx2, err := gpx.UnmarshalWithStdlibXML(path)
+			gpx2, err := gpx.UnmarshalWithStdlibXML(bytes.NewReader(data))
 			if err != nil {
 				t.Fatalf("xml: %v", err)
 			}

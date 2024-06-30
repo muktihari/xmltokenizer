@@ -1,6 +1,7 @@
 package xmltokenizer_test
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -94,14 +95,19 @@ func BenchmarkUnmarshalGPX(b *testing.B) {
 
 		name := strings.TrimPrefix(path, "testdata/")
 
+		data, err := os.ReadFile(path)
+		if err != nil {
+			panic(err)
+		}
+
 		b.Run(fmt.Sprintf("stdlib.xml:%q", name), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, _ = gpx.UnmarshalWithStdlibXML(path)
+				_, _ = gpx.UnmarshalWithStdlibXML(bytes.NewReader(data))
 			}
 		})
 		b.Run(fmt.Sprintf("xmltokenizer:%q", name), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, _ = gpx.UnmarshalWithXMLTokenizer(path)
+				_, _ = gpx.UnmarshalWithXMLTokenizer(bytes.NewReader(data))
 			}
 		})
 
