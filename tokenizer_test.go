@@ -59,9 +59,9 @@ func TestTokenWithInmemXML(t *testing.T) {
 				{
 					Name: xmltokenizer.Name{Local: []byte("body"), Full: []byte("body")},
 					Attrs: []xmltokenizer.Attr{
-						{Name: xmltokenizer.Name{Space: []byte("xmlns"), Local: []byte("foo"), Full: []byte("xmlns:foo")}, Value: []byte("ns1")},
+						{Name: xmltokenizer.Name{Prefix: []byte("xmlns"), Local: []byte("foo"), Full: []byte("xmlns:foo")}, Value: []byte("ns1")},
 						{Name: xmltokenizer.Name{Local: []byte("xmlns"), Full: []byte("xmlns")}, Value: []byte("ns2")},
-						{Name: xmltokenizer.Name{Space: []byte("xmlns"), Local: []byte("tag"), Full: []byte("xmlns:tag")}, Value: []byte("ns3")},
+						{Name: xmltokenizer.Name{Prefix: []byte("xmlns"), Local: []byte("tag"), Full: []byte("xmlns:tag")}, Value: []byte("ns3")},
 					},
 				},
 				{
@@ -72,14 +72,16 @@ func TestTokenWithInmemXML(t *testing.T) {
 					Data: []byte("World &lt;&gt;&apos;&quot; &#x767d;&#40300;翔"),
 				},
 				{
-					Name: xmltokenizer.Name{Local: []byte("/hello"), Full: []byte("/hello")},
+					Name:         xmltokenizer.Name{Local: []byte("hello"), Full: []byte("hello")},
+					IsEndElement: true,
 				},
 				{
 					Name: xmltokenizer.Name{Local: []byte("query"), Full: []byte("query")},
 					Data: []byte("&何; &is-it;"),
 				},
 				{
-					Name: xmltokenizer.Name{Local: []byte("/query"), Full: []byte("/query")},
+					Name:         xmltokenizer.Name{Local: []byte("query"), Full: []byte("query")},
+					IsEndElement: true,
 				},
 				{
 					Name:        xmltokenizer.Name{Local: []byte("goodbye"), Full: []byte("goodbye")},
@@ -88,8 +90,8 @@ func TestTokenWithInmemXML(t *testing.T) {
 				{
 					Name: xmltokenizer.Name{Local: []byte("outer"), Full: []byte("outer")},
 					Attrs: []xmltokenizer.Attr{
-						{Name: xmltokenizer.Name{Space: []byte("foo"), Local: []byte("attr"), Full: []byte("foo:attr")}, Value: []byte("value")},
-						{Name: xmltokenizer.Name{Space: []byte("xmlns"), Local: []byte("tag"), Full: []byte("xmlns:tag")}, Value: []byte("ns4")},
+						{Name: xmltokenizer.Name{Prefix: []byte("foo"), Local: []byte("attr"), Full: []byte("foo:attr")}, Value: []byte("value")},
+						{Name: xmltokenizer.Name{Prefix: []byte("xmlns"), Local: []byte("tag"), Full: []byte("xmlns:tag")}, Value: []byte("ns4")},
 					},
 				},
 				{
@@ -97,17 +99,20 @@ func TestTokenWithInmemXML(t *testing.T) {
 					SelfClosing: true,
 				},
 				{
-					Name: xmltokenizer.Name{Local: []byte("/outer"), Full: []byte("/outer")},
+					Name:         xmltokenizer.Name{Local: []byte("outer"), Full: []byte("outer")},
+					IsEndElement: true,
 				},
 				{
-					Name: xmltokenizer.Name{Space: []byte("tag"), Local: []byte("name"), Full: []byte("tag:name")},
+					Name: xmltokenizer.Name{Prefix: []byte("tag"), Local: []byte("name"), Full: []byte("tag:name")},
 					Data: []byte("Some text here."),
 				},
 				{
-					Name: xmltokenizer.Name{Space: []byte("/tag"), Local: []byte("name"), Full: []byte("/tag:name")},
+					Name:         xmltokenizer.Name{Prefix: []byte("tag"), Local: []byte("name"), Full: []byte("tag:name")},
+					IsEndElement: true,
 				},
 				{
-					Name: xmltokenizer.Name{Local: []byte("/body"), Full: []byte("/body")},
+					Name:         xmltokenizer.Name{Local: []byte("body"), Full: []byte("body")},
+					IsEndElement: true,
 				},
 				{
 					Data:        []byte("<!-- missing final newline -->"),
@@ -135,7 +140,7 @@ func TestTokenWithInmemXML(t *testing.T) {
 					SelfClosing: true,
 				},
 				{Name: xmltokenizer.Name{Local: []byte("a"), Full: []byte("a")}},
-				{Name: xmltokenizer.Name{Local: []byte("/a"), Full: []byte("/a")}},
+				{Name: xmltokenizer.Name{Local: []byte("a"), Full: []byte("a")}, IsEndElement: true},
 			},
 		},
 	}
@@ -179,18 +184,30 @@ func TestTokenWithSmallXMLFiles(t *testing.T) {
 				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
 				Data: []byte("text"),
 			},
-			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{
+				Name:         xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				IsEndElement: true,
+			},
 			{
 				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
 				Data: []byte("<element>text</element>"),
 			},
-			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{
+				Name:         xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				IsEndElement: true,
+			},
 			{
 				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
 				Data: []byte("<element>text</element>"),
 			},
-			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
-			{Name: xmltokenizer.Name{Local: []byte("/content"), Full: []byte("/content")}},
+			{
+				Name:         xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				IsEndElement: true,
+			},
+			{
+				Name:         xmltokenizer.Name{Local: []byte("content"), Full: []byte("content")},
+				IsEndElement: true,
+			},
 		}},
 		{filename: "cdata_clrf.xml", expecteds: []xmltokenizer.Token{
 			tokenHeader,
@@ -199,18 +216,30 @@ func TestTokenWithSmallXMLFiles(t *testing.T) {
 				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
 				Data: []byte("text"),
 			},
-			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{
+				Name:         xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				IsEndElement: true,
+			},
 			{
 				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
 				Data: []byte("<element>text</element>"),
 			},
-			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
+			{
+				Name:         xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				IsEndElement: true,
+			},
 			{
 				Name: xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
 				Data: []byte("<element>text</element>"),
 			},
-			{Name: xmltokenizer.Name{Local: []byte("/data"), Full: []byte("/data")}},
-			{Name: xmltokenizer.Name{Local: []byte("/content"), Full: []byte("/content")}},
+			{
+				Name:         xmltokenizer.Name{Local: []byte("data"), Full: []byte("data")},
+				IsEndElement: true,
+			},
+			{
+				Name:         xmltokenizer.Name{Local: []byte("content"), Full: []byte("content")},
+				IsEndElement: true,
+			},
 		}},
 		{filename: filepath.Join("corrupted", "cdata_truncated.xml"), expecteds: []xmltokenizer.Token{
 			tokenHeader,
@@ -242,16 +271,16 @@ func TestTokenWithSmallXMLFiles(t *testing.T) {
 			},
 			{Name: xmltokenizer.Name{Local: []byte("note"), Full: []byte("note")}},
 			{Name: xmltokenizer.Name{Local: []byte("to"), Full: []byte("to")}, Data: []byte("Tove")},
-			{Name: xmltokenizer.Name{Local: []byte("/to"), Full: []byte("/to")}},
+			{Name: xmltokenizer.Name{Local: []byte("to"), Full: []byte("to")}, IsEndElement: true},
 			{Name: xmltokenizer.Name{Local: []byte("from"), Full: []byte("from")}, Data: []byte("Jani")},
-			{Name: xmltokenizer.Name{Local: []byte("/from"), Full: []byte("/from")}},
+			{Name: xmltokenizer.Name{Local: []byte("from"), Full: []byte("from")}, IsEndElement: true},
 			{Name: xmltokenizer.Name{Local: []byte("heading"), Full: []byte("heading")}, Data: []byte("Reminder")},
-			{Name: xmltokenizer.Name{Local: []byte("/heading"), Full: []byte("/heading")}},
+			{Name: xmltokenizer.Name{Local: []byte("heading"), Full: []byte("heading")}, IsEndElement: true},
 			{Name: xmltokenizer.Name{Local: []byte("body"), Full: []byte("body")}, Data: []byte("Don't forget me this weekend!")},
-			{Name: xmltokenizer.Name{Local: []byte("/body"), Full: []byte("/body")}},
+			{Name: xmltokenizer.Name{Local: []byte("body"), Full: []byte("body")}, IsEndElement: true},
 			{Name: xmltokenizer.Name{Local: []byte("footer"), Full: []byte("footer")}, Data: []byte("&writer;&nbsp;&copyright;")},
-			{Name: xmltokenizer.Name{Local: []byte("/footer"), Full: []byte("/footer")}},
-			{Name: xmltokenizer.Name{Local: []byte("/note"), Full: []byte("/note")}},
+			{Name: xmltokenizer.Name{Local: []byte("footer"), Full: []byte("footer")}, IsEndElement: true},
+			{Name: xmltokenizer.Name{Local: []byte("note"), Full: []byte("note")}, IsEndElement: true},
 		}},
 	}
 

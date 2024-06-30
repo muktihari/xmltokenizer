@@ -77,7 +77,7 @@ func (r *Row) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token
 		if token.IsEndElementOf(se) { // Reach desired EndElement
 			return nil
 		}
-		if token.IsEndElement() { // Ignore child's EndElements
+		if token.IsEndElement { // Ignore child's EndElements
 			continue
 		}
 		switch string(token.Name.Local) {
@@ -123,7 +123,7 @@ func (c *Cell) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Toke
 		if token.IsEndElementOf(se) { // Reach desired EndElement
 			return nil
 		}
-		if token.IsEndElement() { // Ignore child's EndElements
+		if token.IsEndElement { // Ignore child's EndElements
 			continue
 		}
 		switch string(token.Name.Local) {

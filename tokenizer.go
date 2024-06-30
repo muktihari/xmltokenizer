@@ -17,7 +17,7 @@ const (
 const (
 	defaultReadBufferSize      = 4 << 10
 	autoGrowBufferMaxLimitSize = 1000 << 10
-	defaultAttrsBufferSize     = 8
+	defaultAttrsBufferSize     = 16
 )
 
 // Tokenizer is a XML tokenizer.
@@ -283,12 +283,13 @@ func (t *Tokenizer) manageBuffer() error {
 }
 
 func (t *Tokenizer) clearToken() {
-	t.token.Name.Space = nil
+	t.token.Name.Prefix = nil
 	t.token.Name.Local = nil
 	t.token.Name.Full = nil
 	t.token.Attrs = t.token.Attrs[:0]
 	t.token.Data = nil
 	t.token.SelfClosing = false
+	t.token.IsEndElement = false
 }
 
 // consumeNonTagIdentifier consumes identifier starts with "<?" or "<!", make it raw data.
@@ -303,13 +304,17 @@ func (t *Tokenizer) consumeNonTagIdentifier(b []byte) []byte {
 
 func (t *Tokenizer) consumeTagName(b []byte) []byte {
 	var pos, fullpos int
-	for i := range b {
+	for i := 0; i < len(b); i++ {
 		switch b[i] {
 		case '<':
+			if b[i+1] == '/' {
+				t.token.IsEndElement = true
+				i++
+			}
 			pos = i + 1
 			fullpos = i + 1
 		case ':':
-			t.token.Name.Space = trim(b[pos:i])
+			t.token.Name.Prefix = trim(b[pos:i])
 			pos = i + 1
 		case '>', ' ': // e.g. <gpx>, <trkpt lat="-7.1872750" lon="110.3450230">
 			if b[i] == '>' && b[i-1] == '/' { // In case we encounter <name/>
@@ -324,14 +329,14 @@ func (t *Tokenizer) consumeTagName(b []byte) []byte {
 }
 
 func (t *Tokenizer) consumeAttrs(b []byte) []byte {
-	var space, local, full []byte
+	var prefix, local, full []byte
 	var pos, fullpos int
 	var inquote bool
 	for i := range b {
 		switch b[i] {
 		case ':':
 			if !inquote {
-				space = trim(b[pos:i])
+				prefix = trim(b[pos:i])
 				pos = i + 1
 			}
 		case '=':
@@ -345,10 +350,10 @@ func (t *Tokenizer) consumeAttrs(b []byte) []byte {
 					continue
 				}
 				t.token.Attrs = append(t.token.Attrs, Attr{
-					Name:  Name{Space: space, Local: local, Full: full},
+					Name:  Name{Prefix: prefix, Local: local, Full: full},
 					Value: trim(b[pos+1 : i]),
 				})
-				space, local, full = nil, nil, nil
+				prefix, local, full = nil, nil, nil
 				pos = i + 1
 				fullpos = i + 1
 			}

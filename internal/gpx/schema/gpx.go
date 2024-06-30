@@ -35,7 +35,7 @@ func (g *GPX) UnmarshalToken(tok *xmltokenizer.Tokenizer, se *xmltokenizer.Token
 		if token.IsEndElementOf(se) {
 			return nil
 		}
-		if token.IsEndElement() {
+		if token.IsEndElement {
 			continue
 		}
 

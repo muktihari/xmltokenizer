@@ -27,8 +27,9 @@ func TestIsEndElement(t *testing.T) {
 			name: "an end element",
 			token: xmltokenizer.Token{
 				Name: xmltokenizer.Name{
-					Full: []byte("/worksheet"),
+					Full: []byte("worksheet"),
 				},
+				IsEndElement: true,
 			},
 			expected: true,
 		},
@@ -54,7 +55,7 @@ func TestIsEndElement(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			if r := tc.token.IsEndElement(); r != tc.expected {
+			if r := tc.token.IsEndElement; r != tc.expected {
 				t.Fatalf("expected: %t, got: %t", tc.expected, r)
 			}
 		})
@@ -71,8 +72,9 @@ func TestIsEndElementOf(t *testing.T) {
 			name: "correct end element",
 			t1: xmltokenizer.Token{
 				Name: xmltokenizer.Name{
-					Full: []byte("/worksheet"),
+					Full: []byte("worksheet"),
 				},
+				IsEndElement: true,
 			},
 			t2: xmltokenizer.Token{
 				Name: xmltokenizer.Name{
@@ -123,15 +125,15 @@ func TestIsEndElementOf(t *testing.T) {
 func TestCopy(t *testing.T) {
 	t1 := xmltokenizer.Token{
 		Name: xmltokenizer.Name{
-			Space: []byte("gpxtpx"),
-			Local: []byte("hr"),
-			Full:  []byte("gpxtpx:hr"),
+			Prefix: []byte("gpxtpx"),
+			Local:  []byte("hr"),
+			Full:   []byte("gpxtpx:hr"),
 		},
 		Attrs: []xmltokenizer.Attr{{
 			Name: xmltokenizer.Name{
-				Space: nil,
-				Local: []byte("units"),
-				Full:  []byte("units"),
+				Prefix: nil,
+				Local:  []byte("units"),
+				Full:   []byte("units"),
 			},
 			Value: []byte("bpm"),
 		}},

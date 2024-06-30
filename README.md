@@ -5,7 +5,7 @@
 [![CodeCov](https://codecov.io/gh/muktihari/xmltokenizer/branch/master/graph/badge.svg)](https://codecov.io/gh/muktihari/xmltokenizer)
 [![Go Report Card](https://goreportcard.com/badge/github.com/muktihari/xmltokenizer)](https://goreportcard.com/report/github.com/muktihari/xmltokenizer)
 
-XML Tokenizer is a low-memory high performance library for parsing simple XML 1.0. This is an alternative option to the standard library's xml when speed is your main concern. This may not cover all XML files, but it can cover typical XML files.
+XML Tokenizer is a low-memory high performance non-namespace parser library for parsing simple XML 1.0. This is an alternative option to the standard library's xml when speed is your main concern and you are willing to sacrifice certain features, such as handling the namespace, in favor of speed ([discussion](https://www.reddit.com/r/golang/comments/1drdji3/xml_tokenizer_thats_4x_faster_than_stdlibs_xml/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button)). This may not cover all XML files, but it can cover typical XML files.
 
 # Motivation
 
