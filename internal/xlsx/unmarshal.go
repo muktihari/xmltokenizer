@@ -3,20 +3,13 @@ package xlsx
 import (
 	"encoding/xml"
 	"io"
-	"os"
 
 	"github.com/muktihari/xmltokenizer"
 	"github.com/muktihari/xmltokenizer/internal/xlsx/schema"
 )
 
-func UnmarshalWithXMLTokenizer(path string) (schema.SheetData, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	tok := xmltokenizer.New(f)
+func UnmarshalWithXMLTokenizer(r io.Reader) (schema.SheetData, error) {
+	tok := xmltokenizer.New(r)
 	var sheetData schema.SheetData
 loop:
 	for {
@@ -43,14 +36,8 @@ loop:
 	return sheetData, nil
 }
 
-func UnmarshalWithStdlibXML(path string) (schema.SheetData, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	dec := xml.NewDecoder(f)
+func UnmarshalWithStdlibXML(r io.Reader) (schema.SheetData, error) {
+	dec := xml.NewDecoder(r)
 	var sheetData schema.SheetData
 	for {
 		token, err := dec.Token()

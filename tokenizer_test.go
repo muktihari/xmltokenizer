@@ -355,11 +355,16 @@ func TestTokenOnGPXFiles(t *testing.T) {
 func TestTokenOnXLSXFiles(t *testing.T) {
 	path := filepath.Join("testdata", "xlsx_sheet1.xml")
 
-	sheet1, err := xlsx.UnmarshalWithXMLTokenizer(path)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Skip(err)
+	}
+
+	sheet1, err := xlsx.UnmarshalWithXMLTokenizer(bytes.NewReader(data))
 	if err != nil {
 		t.Fatalf("xmltokenizer: %v", err)
 	}
-	sheet2, err := xlsx.UnmarshalWithStdlibXML(path)
+	sheet2, err := xlsx.UnmarshalWithStdlibXML(bytes.NewReader(data))
 	if err != nil {
 		t.Fatalf("xml: %v", err)
 	}
@@ -405,7 +410,13 @@ loop:
 		}
 	}
 
-	sheetData2, err := xlsx.UnmarshalWithStdlibXML(path)
+	f2, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer f2.Close()
+
+	sheetData2, err := xlsx.UnmarshalWithStdlibXML(f2)
 	if err != nil {
 		t.Fatal(err)
 	}
