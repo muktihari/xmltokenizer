@@ -3,19 +3,12 @@ package gpx
 import (
 	"encoding/xml"
 	"io"
-	"os"
 
 	"github.com/muktihari/xmltokenizer"
 	"github.com/muktihari/xmltokenizer/internal/gpx/schema"
 )
 
-func UnmarshalWithXMLTokenizer(path string) (schema.GPX, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
+func UnmarshalWithXMLTokenizer(f io.Reader) (schema.GPX, error) {
 	tok := xmltokenizer.New(f)
 	var gpx schema.GPX
 loop:
@@ -43,13 +36,7 @@ loop:
 	return gpx, nil
 }
 
-func UnmarshalWithStdlibXML(path string) (schema.GPX, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
+func UnmarshalWithStdlibXML(f io.Reader) (schema.GPX, error) {
 	dec := xml.NewDecoder(f)
 	var gpx schema.GPX
 loop:
