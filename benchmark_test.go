@@ -22,10 +22,16 @@ func BenchmarkToken(b *testing.B) {
 			return nil
 		}
 		name := strings.TrimPrefix(path, "testdata/")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			b.Logf("%v: %v", path, err)
+			return nil
+		}
+
 		b.Run(fmt.Sprintf("stdlib.xml:%q", name), func(b *testing.B) {
 			var err error
 			for i := 0; i < b.N; i++ {
-				if err = unmarshalWithStdlibXML(path); err != nil {
+				if err = unmarshalWithStdlibXML(bytes.NewReader(data)); err != nil {
 					b.Skipf("could not unmarshal: %v", err)
 				}
 			}
@@ -33,7 +39,7 @@ func BenchmarkToken(b *testing.B) {
 		b.Run(fmt.Sprintf("xmltokenizer:%q", name), func(b *testing.B) {
 			var err error
 			for i := 0; i < b.N; i++ {
-				if err = unmarshalWithXMLTokenizer(path); err != nil {
+				if err = unmarshalWithXMLTokenizer(bytes.NewReader(data)); err != nil {
 					b.Skipf("could not unmarshal: %v", err)
 				}
 			}
@@ -42,14 +48,8 @@ func BenchmarkToken(b *testing.B) {
 	})
 }
 
-func unmarshalWithXMLTokenizer(path string) error {
-	f, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	tok := xmltokenizer.New(f)
+func unmarshalWithXMLTokenizer(r io.Reader) error {
+	tok := xmltokenizer.New(r)
 	for {
 		token, err := tok.Token()
 		if err == io.EOF {
@@ -63,14 +63,8 @@ func unmarshalWithXMLTokenizer(path string) error {
 	return nil
 }
 
-func unmarshalWithStdlibXML(path string) error {
-	f, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	dec := xml.NewDecoder(f)
+func unmarshalWithStdlibXML(r io.Reader) error {
+	dec := xml.NewDecoder(r)
 	for {
 		token, err := dec.Token()
 		if err == io.EOF {
