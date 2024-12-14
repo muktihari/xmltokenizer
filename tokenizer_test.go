@@ -143,6 +143,30 @@ func TestTokenWithInmemXML(t *testing.T) {
 				{Name: xmltokenizer.Name{Local: []byte("a"), Full: []byte("a")}, IsEndElement: true},
 			},
 		},
+		{
+			name: "unexpected equals in attr name",
+			xml:  "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Image URL=\"https://test.com/my-url-ending-in-=\" URL2=\"https://ok.com\"/>",
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:         []byte(`<?xml version="1.0" encoding="UTF-8"?>`),
+					SelfClosing:  true,
+					IsEndElement: false,
+				},
+				{Name: xmltokenizer.Name{Local: []byte("Image"), Full: []byte("Image")},
+					Attrs: []xmltokenizer.Attr{
+						{
+							Name:  xmltokenizer.Name{Local: []uint8("URL"), Full: []uint8("URL")},
+							Value: []uint8("https://test.com/my-url-ending-in-="),
+						},
+						{
+							Name:  xmltokenizer.Name{Local: []uint8("URL2"), Full: []uint8("URL2")},
+							Value: []uint8("https://ok.com"),
+						},
+					},
+					SelfClosing: true,
+				},
+			},
+		},
 	}
 
 	for i, tc := range tt {

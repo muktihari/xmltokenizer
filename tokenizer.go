@@ -340,9 +340,11 @@ func (t *Tokenizer) consumeAttrs(b []byte) []byte {
 				pos = i + 1
 			}
 		case '=':
-			local = trim(b[pos:i])
-			full = trim(b[fullpos:i])
-			pos = i + 1
+			if !inquote {
+				local = trim(b[pos:i])
+				full = trim(b[fullpos:i])
+				pos = i + 1
+			}
 		case '"':
 			inquote = !inquote
 			if !inquote {
