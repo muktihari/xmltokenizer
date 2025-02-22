@@ -225,6 +225,27 @@ func TestTokenWithInmemXML(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "tab inside element",
+			xml:  `<sample	foo="bar"/>`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Name: xmltokenizer.Name{
+						Local: []uint8("sample"),
+						Full:  []uint8("sample"),
+					},
+					Attrs: []xmltokenizer.Attr{
+						{
+							Name: xmltokenizer.Name{
+								Local: []uint8("foo"),
+								Full:  []uint8("foo")},
+							Value: []uint8("bar"),
+						},
+					},
+					SelfClosing: true,
+				},
+			},
+		},
 	}
 
 	for i, tc := range tt {
@@ -237,6 +258,9 @@ func TestTokenWithInmemXML(t *testing.T) {
 			for i := 0; ; i++ {
 				token, err := tok.Token()
 				if err == io.EOF {
+					if i != len(tc.expecteds) {
+						t.Fatalf("expected %d tokens, got %d", len(tc.expecteds), i)
+					}
 					break
 				}
 				if err != nil {

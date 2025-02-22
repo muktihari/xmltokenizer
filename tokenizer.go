@@ -326,7 +326,7 @@ func (t *Tokenizer) consumeTagName(b []byte) []byte {
 		case ':':
 			t.token.Name.Prefix = trim(b[pos:i])
 			pos = i + 1
-		case '>', ' ': // e.g. <gpx>, <trkpt lat="-7.1872750" lon="110.3450230">
+		case '>', ' ', '\t', '\r', '\n': // e.g. <gpx>, <trkpt lat="-7.1872750" lon="110.3450230">
 			if b[i] == '>' && b[i-1] == '/' { // In case we encounter <name/>
 				i--
 			}
