@@ -174,6 +174,9 @@ func (t *Tokenizer) RawToken() (b []byte, err error) {
 		case '<':
 			if openclose == 0 {
 				pivot = pos
+			} else if d := pos - pivot; d >= 3 && string(t.buf[pivot+1:pivot+4]) == "!--" {
+				// Inside a comment
+				break
 			}
 			openclose++
 		case '>':

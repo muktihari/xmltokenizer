@@ -211,6 +211,20 @@ func TestTokenWithInmemXML(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "left angle bracket inside comment",
+			xml:  `<!--<--><!-- foo<bar<baz -->`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []byte(`<!--<-->`),
+					SelfClosing: true,
+				},
+				{
+					Data:        []byte(`<!-- foo<bar<baz -->`),
+					SelfClosing: true,
+				},
+			},
+		},
 	}
 
 	for i, tc := range tt {
