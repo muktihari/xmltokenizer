@@ -177,6 +177,13 @@ func (t *Tokenizer) RawToken() (b []byte, err error) {
 			}
 			openclose++
 		case '>':
+			if d := pos - pivot; d >= 3 && string(t.buf[pivot+1:pivot+4]) == "!--" {
+				// Inside a comment
+				if d < 5 || string(t.buf[pos-2:pos]) != "--" {
+					// This > is not part of the closing -->
+					break
+				}
+			}
 			if openclose--; openclose != 0 {
 				break
 			}
