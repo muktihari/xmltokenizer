@@ -167,6 +167,21 @@ func TestTokenWithInmemXML(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "slash inside attribute value",
+			xml:  `<sample path="foo/bar/baz">`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Name: xmltokenizer.Name{Local: []byte("sample"), Full: []byte("sample")},
+					Attrs: []xmltokenizer.Attr{
+						{
+							Name:  xmltokenizer.Name{Local: []uint8("path"), Full: []uint8("path")},
+							Value: []uint8("foo/bar/baz"),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for i, tc := range tt {
