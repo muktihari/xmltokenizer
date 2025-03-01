@@ -167,6 +167,75 @@ func TestTokenWithInmemXML(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "tab after node name",
+			xml:  `<sample	foo="bar"/>`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Name: xmltokenizer.Name{
+						Local: []uint8("sample"),
+						Full:  []uint8("sample"),
+					},
+					Attrs: []xmltokenizer.Attr{
+						{
+							Name: xmltokenizer.Name{
+								Local: []uint8("foo"),
+								Full:  []uint8("foo")},
+							Value: []uint8("bar"),
+						},
+					},
+					SelfClosing: true,
+				},
+			},
+		},
+		{
+			name: "tab after attribute value",
+			xml:  `<sample foo="bar"	/>`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Name: xmltokenizer.Name{
+						Local: []uint8("sample"),
+						Full:  []uint8("sample"),
+					},
+					Attrs: []xmltokenizer.Attr{
+						{
+							Name: xmltokenizer.Name{
+								Local: []uint8("foo"),
+								Full:  []uint8("foo")},
+							Value: []uint8("bar"),
+						},
+					},
+					SelfClosing: true,
+				},
+			},
+		},
+		{
+			name: "tab between attributes",
+			xml:  `<sample foo="bar"	baz="quux"/>`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Name: xmltokenizer.Name{
+						Local: []uint8("sample"),
+						Full:  []uint8("sample"),
+					},
+					Attrs: []xmltokenizer.Attr{
+						{
+							Name: xmltokenizer.Name{
+								Local: []uint8("foo"),
+								Full:  []uint8("foo")},
+							Value: []uint8("bar"),
+						},
+						{
+							Name: xmltokenizer.Name{
+								Local: []uint8("baz"),
+								Full:  []uint8("baz")},
+							Value: []uint8("quux"),
+						},
+					},
+					SelfClosing: true,
+				},
+			},
+		},
 	}
 
 	for i, tc := range tt {
