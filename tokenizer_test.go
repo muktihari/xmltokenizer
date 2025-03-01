@@ -248,6 +248,9 @@ func TestTokenWithInmemXML(t *testing.T) {
 			for i := 0; ; i++ {
 				token, err := tok.Token()
 				if err == io.EOF {
+					if i != len(tc.expecteds) {
+						t.Fatalf("expected %d tokens, got %d", len(tc.expecteds), i)
+					}
 					break
 				}
 				if err != nil {
