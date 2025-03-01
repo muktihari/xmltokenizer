@@ -331,7 +331,7 @@ func (t *Tokenizer) consumeTagName(b []byte) []byte {
 func (t *Tokenizer) consumeAttrs(b []byte) []byte {
 	var prefix, local, full []byte
 	var pos, fullpos int
-	for i := 0; i != len(b); i++ {
+	for i := 0; i < len(b); i++ {
 		switch b[i] {
 		case ':':
 			prefix = trim(b[pos:i])
