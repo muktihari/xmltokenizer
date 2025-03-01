@@ -344,7 +344,7 @@ func (t *Tokenizer) consumeAttrs(b []byte) []byte {
 			for {
 				i++
 				if i+1 == len(b) {
-					return b
+					return nil
 				}
 				if b[i] == '"' {
 					break
