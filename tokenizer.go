@@ -331,34 +331,35 @@ func (t *Tokenizer) consumeTagName(b []byte) []byte {
 func (t *Tokenizer) consumeAttrs(b []byte) []byte {
 	var prefix, local, full []byte
 	var pos, fullpos int
-	var inquote bool
-	for i := range b {
+	for i := 0; i < len(b); i++ {
 		switch b[i] {
 		case ':':
-			if !inquote {
-				prefix = trim(b[pos:i])
-				pos = i + 1
-			}
+			prefix = trim(b[pos:i])
+			pos = i + 1
 		case '=':
-			if !inquote {
-				local = trim(b[pos:i])
-				full = trim(b[fullpos:i])
-				pos = i + 1
-			}
+			local = trim(b[pos:i])
+			full = trim(b[fullpos:i])
+			pos = i + 1
 		case '"':
-			inquote = !inquote
-			if !inquote {
-				if len(full) == 0 { // Ignore malformed attr
-					continue
+			for {
+				i++
+				if i+1 == len(b) {
+					return nil
 				}
-				t.token.Attrs = append(t.token.Attrs, Attr{
-					Name:  Name{Prefix: prefix, Local: local, Full: full},
-					Value: trim(b[pos+1 : i]),
-				})
-				prefix, local, full = nil, nil, nil
-				pos = i + 1
-				fullpos = i + 1
+				if b[i] == '"' {
+					break
+				}
 			}
+			if len(full) == 0 { // Ignore malformed attr
+				continue
+			}
+			t.token.Attrs = append(t.token.Attrs, Attr{
+				Name:  Name{Prefix: prefix, Local: local, Full: full},
+				Value: trim(b[pos+1 : i]),
+			})
+			prefix, local, full = nil, nil, nil
+			pos = i + 1
+			fullpos = i + 1
 		case '/':
 			t.token.SelfClosing = true
 		case '>':
