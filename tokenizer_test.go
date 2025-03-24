@@ -251,6 +251,107 @@ func TestTokenWithInmemXML(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "right angle bracket inside attribute value",
+			xml:  `<sample path="foo>bar>baz">`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Name: xmltokenizer.Name{Local: []byte("sample"), Full: []byte("sample")},
+					Attrs: []xmltokenizer.Attr{
+						{
+							Name:  xmltokenizer.Name{Local: []uint8("path"), Full: []uint8("path")},
+							Value: []uint8("foo>bar>baz"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "right angle bracket inside comment",
+			xml:  `<!-->--><!-- foo>bar>baz -->`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []byte(`<!-->-->`),
+					SelfClosing: true,
+				},
+				{
+					Data:        []byte(`<!-- foo>bar>baz -->`),
+					SelfClosing: true,
+				},
+			},
+		},
+		{
+			name: "left angle bracket inside comment",
+			xml:  `<!--<--><!-- foo<bar<baz -->`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []byte(`<!--<-->`),
+					SelfClosing: true,
+				},
+				{
+					Data:        []byte(`<!-- foo<bar<baz -->`),
+					SelfClosing: true,
+				},
+			},
+		},
+		{
+			name: "angle brackets in processing instruction",
+			xml:  `<?sample <foo> ?>`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []uint8("<?sample <foo> ?>"),
+					SelfClosing: true,
+				},
+			},
+		},
+		{
+			name: "quote in processing instruction",
+			xml:  `<?sample " ?>`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []uint8(`<?sample " ?>`),
+					SelfClosing: true,
+				},
+			},
+		},
+		{
+			name: "quoted right angle bracket in doctype",
+			xml:  `<!DOCTYPE ">" >`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []uint8(`<!DOCTYPE ">" >`),
+					SelfClosing: true,
+				},
+			},
+		},
+		{
+			name: "commented angle brackets in doctype",
+			xml:  `<!DOCTYPE [ <!-- <foo> --> ] ><!DOCTYPE [ <!-- > --> ] ><!DOCTYPE [ <!-- < --> ] >`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []uint8(`<!DOCTYPE [ <!-- <foo> --> ] >`),
+					SelfClosing: true,
+				},
+				{
+					Data:        []uint8(`<!DOCTYPE [ <!-- > --> ] >`),
+					SelfClosing: true,
+				},
+				{
+					Data:        []uint8(`<!DOCTYPE [ <!-- < --> ] >`),
+					SelfClosing: true,
+				},
+			},
+		},
+		{
+			name: "commented quote in doctype",
+			xml:  `<!DOCTYPE [ <!-- " --> ] >`,
+			expecteds: []xmltokenizer.Token{
+				{
+					Data:        []uint8(`<!DOCTYPE [ <!-- " --> ] >`),
+					SelfClosing: true,
+				},
+			},
+		},
 	}
 
 	for i, tc := range tt {

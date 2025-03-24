@@ -1,6 +1,7 @@
 package xmltokenizer
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -152,50 +153,102 @@ func (t *Tokenizer) Token() (token Token, err error) {
 // it may returns last token bytes and an error.
 // The returned token bytes is only valid before next
 // Token or RawToken method invocation.
-func (t *Tokenizer) RawToken() (b []byte, err error) {
+func (t *Tokenizer) RawToken() ([]byte, error) {
 	if t.err != nil {
 		return nil, t.err
 	}
-
-	var pivot, pos = t.cur, t.cur
-	var openclose int // zero means open '<' and close '>' is matched.
+	var pivot int
 	for {
-		if pos >= len(t.buf) {
+		// Find opening <
+		p := bytes.IndexByte(t.buf[t.cur:], '<')
+		if p == -1 {
+			t.memmoveRemainingBytes(t.cur)
+			t.err = t.manageBuffer()
+			if t.err == nil {
+				continue
+			}
+			return nil, t.err
+		}
+		pivot = t.cur + p
+		break
+	}
+	for {
+		// Find closing >
+		pos := t.findTokenEnd(pivot)
+		if pos == -1 {
 			pivot, pos = t.memmoveRemainingBytes(pivot)
-			if err = t.manageBuffer(); err != nil {
-				if openclose != 0 && errors.Is(err, io.EOF) {
-					err = io.ErrUnexpectedEOF
-				}
-				t.err = err
-				return t.buf[pivot:pos], err
+			t.err = t.manageBuffer()
+			if t.err == nil {
+				continue
 			}
+			if errors.Is(t.err, io.EOF) {
+				t.err = io.ErrUnexpectedEOF
+			}
+			return t.buf[pivot:pos], t.err
 		}
-		switch t.buf[pos] {
-		case '<':
-			if openclose == 0 {
-				pivot = pos
-			}
-			openclose++
-		case '>':
-			if openclose--; openclose != 0 {
-				break
-			}
-
-			switch t.buf[pivot+1] {
-			case '?', '!': // Maybe a ProcInst "<?target", a Directive "<!DOCTYPE" or a Comment "<!--"
-				buf := trim(t.buf[pivot : pos+1 : cap(t.buf)])
-				t.cur = pos + 1
-				return buf, err
-			}
-
-			// Regular tag, check if next char represents CharData, include it.
+		switch t.buf[pivot+1] {
+		default:
 			pivot, pos = t.parseCharData(pivot, pos)
-
-			buf := trim(t.buf[pivot : pos+1 : cap(t.buf)])
-			t.cur = pos + 1
-			return buf, err
+			pos++
+		case '?', '!':
 		}
-		pos++
+		buf := trim(t.buf[pivot:pos:cap(t.buf)])
+		t.cur = pos
+		return buf, nil
+	}
+}
+
+// findTokenEnd returns the index of the first character after the
+// token started at the given position, or -1 if more data needs
+// to be buffered.
+func (t *Tokenizer) findTokenEnd(pivot int) int {
+	left := pivot + 1 // left-hand bound on the search area
+	for {
+		var right int // the candidate end point
+		if p := bytes.IndexByte(t.buf[left:], '>'); p == -1 {
+			return -1
+		} else {
+			right = left + p + 1
+		}
+		switch t.buf[pivot+1] {
+		case '?':
+			// is a processing instruction
+			if right >= pivot+3 && t.buf[right-2] == '?' {
+				return right
+			}
+			// this > is not part of the closing ?>
+			left = right
+			continue
+		case '!':
+			if len(t.buf) > pivot+4 && t.buf[pivot+2] == '-' && t.buf[pivot+3] == '-' {
+				// is a comment
+				if right >= pivot+6 && t.buf[right-3] == '-' && t.buf[right-2] == '-' {
+					return right
+				}
+				// this > is not part of the closing -->
+				left = right
+				continue
+			}
+			// is DOCTYPE, ENTITY etc
+			p := bytes.IndexByte(t.buf[left+1:right-1], '<')
+			if p != -1 {
+				left = t.findTokenEnd(left + p + 1)
+				if left == -1 {
+					return -1
+				}
+				// this > is part of a nested tag
+				continue
+			}
+		}
+		if bytes.Count(t.buf[left:right], []byte{'"'})%2 == 0 {
+			return right
+		}
+		// this > is within a quoted value, scan to closing quote
+		p := bytes.IndexByte(t.buf[right:], '"')
+		if p == -1 {
+			return -1
+		}
+		left = right + p + 1
 	}
 }
 
@@ -203,7 +256,7 @@ func (t *Tokenizer) RawToken() (b []byte, err error) {
 // CharData or <![CDATA[ CharData ]]>, this method will include it in the previous token.
 // It returns the new pivot and new position.
 func (t *Tokenizer) parseCharData(pivot, pos int) (newPivot, newPos int) {
-	for i := pos + 1; ; i++ {
+	for i := pos; ; i++ {
 		if i >= len(t.buf) {
 			pivot, i = t.memmoveRemainingBytes(pivot)
 			pos = i - 1
