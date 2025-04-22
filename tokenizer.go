@@ -340,13 +340,14 @@ func (t *Tokenizer) consumeAttrs(b []byte) []byte {
 			local = trim(b[pos:i])
 			full = trim(b[fullpos:i])
 			pos = i + 1
-		case '"':
+		case '"', '\'':
+			d := b[i]
 			for {
 				i++
 				if i+1 == len(b) {
 					return nil
 				}
-				if b[i] == '"' {
+				if b[i] == d {
 					break
 				}
 			}
